@@ -1,4 +1,5 @@
 # Functional Requirements
+
 ## Financial Intelligence Multi-Agent System
 
 **Version:** 0.1.0  
@@ -93,14 +94,16 @@ Version 1 is scoped to US markets, US-listed companies, US economic indicators, 
 
 ### 4.3 Data Retention
 
-| Data Type | Retention Policy |
-|---|---|
-| Market prices (OHLCV) | Permanent |
-| Economic indicator releases | Permanent |
-| SEC filings | Permanent (minimum 3 years) |
-| News articles | 90 days (full content), then summary only |
-| Analyst commentary | 90 days (full content), then summary only |
-| Intraday price cache | 24 hours |
+
+| Data Type                   | Retention Policy                          |
+| --------------------------- | ----------------------------------------- |
+| Market prices (OHLCV)       | Permanent                                 |
+| Economic indicator releases | Permanent                                 |
+| SEC filings                 | Permanent (minimum 3 years)               |
+| News articles               | 90 days (full content), then summary only |
+| Analyst commentary          | 90 days (full content), then summary only |
+| Intraday price cache        | 24 hours                                  |
+
 
 ### 4.4 Summarisation Service
 
@@ -184,12 +187,14 @@ Version 1 is scoped to US markets, US-listed companies, US economic indicators, 
 
 ### 8.1 Candidate Signal Types (TBD — to be validated and formalised)
 
-| Entity Type | Candidate Signals |
-|---|---|
-| Companies | Price momentum, volume anomalies, news mention frequency, earnings surprises |
-| Sectors | Aggregate earnings beats, capital flows, analyst rating changes |
+
+| Entity Type         | Candidate Signals                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| Companies           | Price momentum, volume anomalies, news mention frequency, earnings surprises       |
+| Sectors             | Aggregate earnings beats, capital flows, analyst rating changes                    |
 | Economic Indicators | Deviation from consensus forecasts, rate of change relative to historical patterns |
-| Indices | Breadth indicators, volatility measures, relative strength |
+| Indices             | Breadth indicators, volatility measures, relative strength                         |
+
 
 ---
 
@@ -208,6 +213,441 @@ Version 1 is scoped to US markets, US-listed companies, US economic indicators, 
 
 ---
 
-## Appendix A — Sub-Agents (TBD)
+## Appendix A — Sub-Agents
 
-The specialised sub-agents and their responsibilities, tools, and data sources are to be defined following completion of the functional requirements. Sub-agent design will be derived from the capabilities implied across sections 5, 6, 7, and 8.
+## Overview
+
+The system is composed of three categories of agents:
+
+
+| Category          | Description                                                        |
+| ----------------- | ------------------------------------------------------------------ |
+| **Orchestration** | Manage query decomposition, routing, validation, and clarification |
+| **Asset Class**   | Own domain-specific data retrieval and analysis per asset type     |
+| **Philosophy**    | Apply investment framework lenses over asset class agent outputs   |
+
+
+Asset class agents own **what** data gets retrieved. Philosophy agents own **how** that data gets interpreted and framed. The orchestrator decides **which combination** gets activated per user per query based on the loaded user context summary.
+
+---
+
+## Orchestration Agents
+
+### Orchestrator
+
+**Responsibility:** The central coordinator of the multi-agent system. Manages the full lifecycle of every user interaction from query receipt to response delivery.
+
+**Behavior:**
+
+- Loads the distilled user context summary before processing any query
+- Detects query intent — standard chat, report generation request, or trend inquiry
+- Decomposes queries into sub-questions informed by user context
+- Dispatches sub-questions concurrently to relevant asset class agents
+- Activates the appropriate philosophy agents based on user profile
+- Delegates to the Eval agent for self-validation after each round of sub-agent responses
+- Decides whether to call additional agents, re-query existing agents, or proceed to answer
+- Enforces maximum iteration limits on reasoning loops
+- Delegates to the Clarification agent when confidence threshold is not met
+- Assembles and returns the final personalised response
+
+**Tools & Data Sources:**
+
+- User context summary (via Summarisation Service)
+- All sub-agent outputs
+- No direct external data source access
+
+---
+
+### Eval Agent
+
+**Responsibility:** Validates the sufficiency and coherence of collected sub-agent context relative to the original query. Acts as the quality gate in the orchestrator's reasoning loop.
+
+**Behavior:**
+
+- Receives the original query, user context, and current sub-agent outputs
+- Evaluates whether the collected information is sufficient to answer the query accurately
+- Assigns a confidence score to the current state of information
+- Returns a structured verdict: sufficient, insufficient with specific gaps identified, or ambiguous
+- The orchestrator acts on this verdict to decide next steps
+
+**Tools & Data Sources:**
+
+- No direct external data source access
+- Operates purely over orchestrator-provided context
+
+---
+
+### Clarification Agent
+
+**Responsibility:** Formulates precise, helpful clarification questions when the orchestrator cannot reach the confidence threshold within the maximum iteration limit.
+
+**Behavior:**
+
+- Receives the original query, user context, and the Eval agent's identified gaps
+- Formulates a single focused clarification question that would resolve the most critical gap
+- Ensures the question is framed in plain language appropriate to the user's profile
+- Never returns a low-confidence answer in place of a clarification question
+
+**Tools & Data Sources:**
+
+- No direct external data source access
+- Operates purely over orchestrator-provided context
+
+---
+
+### Retrieval Agent
+
+**Responsibility:** Shared retrieval capability invoked by other agents. Owns Graph RAG, knowledge graph traversal, entity summary access, and raw source fetching. Abstracts retrieval complexity away from domain agents.
+
+**Behavior:**
+
+- Accepts structured retrieval requests from any agent
+- Performs knowledge graph traversal for entity relationship queries
+- Executes Graph RAG over the knowledge base
+- Fetches raw documents from the data store within retention windows
+- Returns structured, source-attributed results
+
+**Tools & Data Sources:**
+
+- Knowledge graph (entity relationships, sector mappings, macro linkages)
+- Entity summary store
+- Raw document store (news, filings, commentary)
+- Vector store for semantic search
+
+---
+
+### Summarisation Agent
+
+**Responsibility:** Maintains structured, up-to-date summaries for all tracked entities and all users. Core system-wide capability consumed by agents and the orchestrator.
+
+**Behavior:**
+
+- Listens for ingestion events and updates relevant entity summary sections
+- Folds expiring content into entity summaries before raw content deletion
+- Listens for user interaction events and updates user context summaries
+- Maintains entity summaries sectioned by: recent news, analyst sentiment, filing highlights, market context
+- Maintains user context summaries containing: risk appetite, followed entities, preferences, summarised recent interaction history
+- Exposes summaries as queryable artifacts to all agents
+
+**Tools & Data Sources:**
+
+- Ingestion event stream (Kafka)
+- User interaction event stream
+- Raw document store
+- Summary store (MongoDB)
+
+---
+
+## Asset Class Agents
+
+### Stocks Agent
+
+**Responsibility:** US equity analysis. Owns stock-specific data retrieval, price analysis, earnings, and fundamental metrics.
+
+**Data Owned:**
+
+- Daily OHLCV price data for US-listed equities
+- Earnings history and upcoming earnings calendar
+- Key fundamental metrics (P/E, EPS, market cap, revenue growth)
+- SEC filings via EDGAR (10-K, 10-Q, 8-K)
+- Dividend history
+
+**Tools & Data Sources:**
+
+- Yahoo Finance / Alpha Vantage / [Polygon.io](http://Polygon.io) (free tier)
+- SEC EDGAR API
+- Retrieval Agent for knowledge graph and semantic search
+
+---
+
+### Bonds Agent
+
+**Responsibility:** Fixed income analysis. Owns bond-specific data, yield curve analysis, and credit metrics.
+
+**Data Owned:**
+
+- US Treasury yield curve data
+- Corporate bond yields and spreads
+- Credit ratings
+- Duration and maturity profiles
+- Fed funds rate and interest rate expectations
+
+**Tools & Data Sources:**
+
+- FRED API (Treasury yields, Fed funds rate)
+- Alpha Vantage / relevant free tier fixed income sources
+- Retrieval Agent
+
+---
+
+### ETF Agent
+
+**Responsibility:** ETF-specific analysis. Owns ETF structure, composition, and performance metrics. Delegates underlying asset analysis to the relevant asset class agents.
+
+**Data Owned:**
+
+- ETF holdings and composition
+- Expense ratios
+- Tracking error vs benchmark
+- Liquidity and trading volume
+- Sector and geographic exposure breakdown
+
+**Tools & Data Sources:**
+
+- Yahoo Finance / ETF-specific free tier sources
+- Retrieval Agent
+- Delegates to Stocks, Bonds, Commodities agents for underlying asset analysis
+
+---
+
+### Commodities Agent
+
+**Responsibility:** Commodities market analysis. Covers precious metals, energy, and agricultural commodities.
+
+**Data Owned:**
+
+- Spot and futures prices for gold, silver, oil, natural gas, agricultural commodities
+- Supply and demand indicators
+- Commodity-specific economic drivers (e.g. oil inventory reports, gold as inflation hedge)
+- Correlation with macro indicators
+
+**Tools & Data Sources:**
+
+- Alpha Vantage / relevant free tier commodities sources
+- FRED API for macro correlations
+- Retrieval Agent
+
+---
+
+### Real Estate Agent
+
+**Responsibility:** US real estate market analysis. V1 covers REITs and broad real estate market indicators. Decomposition into commercial and residential sub-agents is a planned V2 enhancement.
+
+**Data Owned:**
+
+- REIT price data and fundamentals (FFO, dividend yield, NAV)
+- Broad US real estate market indicators
+- Interest rate sensitivity analysis
+- Sector exposure (residential, commercial, industrial, retail) at index level
+
+**Tools & Data Sources:**
+
+- Yahoo Finance for REIT data
+- FRED API for housing indicators (Case-Shiller, housing starts, mortgage rates)
+- Retrieval Agent
+
+> **V2 Enhancement:** Decompose into Commercial Real Estate Agent and Residential Real Estate Agent with dedicated data sources per sub-domain.
+
+---
+
+### Economic Data Agent
+
+**Responsibility:** US macroeconomic data analysis. Owns all economic indicator retrieval, interpretation, and contextualization.
+
+**Data Owned:**
+
+- GDP growth rate
+- CPI and PCE inflation measures
+- Unemployment rate and non-farm payrolls
+- Fed funds rate and FOMC decisions
+- Consumer confidence and PMI indices
+- Trade balance and current account data
+- Release calendar and consensus forecast tracking
+
+**Tools & Data Sources:**
+
+- FRED API (primary source)
+- BLS (Bureau of Labor Statistics) public API
+- Retrieval Agent
+
+---
+
+### News & Sentiment Agent
+
+**Responsibility:** News aggregation, sentiment analysis, and analyst commentary across all asset classes. Provides cross-cutting signal that other agents and the orchestrator consume.
+
+**Data Owned:**
+
+- News articles from financial sources
+- Analyst ratings and price target changes
+- Sentiment scores per entity (positive, neutral, negative)
+- News mention frequency per entity (input to hotness scoring)
+- Significant event detection (product launches, leadership changes, regulatory actions)
+
+**Tools & Data Sources:**
+
+- NewsAPI
+- RSS feeds (Reuters, FT public feeds)
+- Retrieval Agent for historical news context
+- Sentiment scoring via LLM or lightweight model
+
+---
+
+### Trends & Momentum Agent
+
+**Responsibility:** Computes and maintains trend and momentum signals across all tracked entities. Owns the hotness score pipeline.
+
+**Data Owned:**
+
+- Hotness scores (0-100) per entity
+- Price momentum signals
+- Volume anomaly detection
+- News mention frequency trends (from News & Sentiment Agent)
+- Cross-entity momentum comparisons
+
+**Behavior:**
+
+- Consumes algorithmic signals as tools and applies agent reasoning over them
+- Does not make predictions — surfaces and interprets signals
+- Hotness score computation methodology TBD
+
+**Tools & Data Sources:**
+
+- Price and volume data (via Stocks, ETF, Commodities agents or direct)
+- News mention frequency (via News & Sentiment Agent)
+- FRED data for macro momentum signals
+- Retrieval Agent
+
+> **Note:** Specific hotness score algorithms are TBD pending further research. See Section 8 of the Functional Requirements.
+
+---
+
+## Philosophy Agents
+
+Philosophy agents are interpretive agents. They do not fetch data — they apply investment framework lenses over asset class agent outputs. They are activated based on the user's philosophy profile, which is derived from risk appetite and overridable by the user.
+
+### Default Philosophy Mapping
+
+
+| Risk Appetite | Default Philosophy Pair |
+| ------------- | ----------------------- |
+| Conservative  | Blue Chip + Value       |
+| Moderate      | Value + Growth          |
+| Aggressive    | Growth + Macro          |
+
+
+Users have visibility into their assigned philosophies and can override either or both selections from their profile settings.
+
+---
+
+### Value Investing Agent
+
+**Philosophy:** Seeks undervalued assets trading below intrinsic value with a margin of safety. Focuses on fundamentals, earnings quality, balance sheet strength, and long-term business durability.
+
+**Analytical Focus:**
+
+- P/E, P/B, P/FCF ratios relative to historical and sector averages
+- Earnings consistency and quality
+- Debt levels and balance sheet health
+- Competitive moat assessment
+- Discount to intrinsic value estimation
+
+**Tools & Data Sources:**
+
+- No direct external sources
+- Operates over Stocks Agent and Economic Data Agent outputs
+
+---
+
+### Growth Investing Agent
+
+**Philosophy:** Seeks companies with above-average growth potential, willing to accept higher valuations in exchange for revenue and earnings growth trajectory.
+
+**Analytical Focus:**
+
+- Revenue and earnings growth rates
+- TAM (total addressable market) expansion signals
+- R&D investment and product pipeline
+- Margin expansion trends
+- Relative strength vs sector peers
+
+**Tools & Data Sources:**
+
+- No direct external sources
+- Operates over Stocks Agent, ETF Agent, and News & Sentiment Agent outputs
+
+---
+
+### Macro Investing Agent
+
+**Philosophy:** Positions based on macroeconomic trends, monetary policy, geopolitical shifts, and cross-asset relationships. Top-down analytical approach.
+
+**Analytical Focus:**
+
+- Interest rate cycle positioning
+- Inflation regime assessment
+- Currency and commodity macro drivers
+- Sector rotation based on economic cycle phase
+- Cross-asset correlation analysis
+
+**Tools & Data Sources:**
+
+- No direct external sources
+- Operates over Economic Data Agent, Bonds Agent, Commodities Agent, and Trends & Momentum Agent outputs
+
+---
+
+### Blue Chip Investing Agent
+
+**Philosophy:** Focuses on large, financially stable, market-leading companies with consistent dividend histories and lower volatility profiles.
+
+**Analytical Focus:**
+
+- Dividend yield, payout ratio, and dividend growth history
+- Market capitalisation and liquidity
+- Revenue stability and recession resilience
+- Credit quality and debt serviceability
+- Long-term total return vs volatility profile
+
+**Tools & Data Sources:**
+
+- No direct external sources
+- Operates over Stocks Agent, Bonds Agent, and Economic Data Agent outputs
+
+---
+
+## Agent Interaction Summary
+
+```
+User Query
+    │
+    ▼
+Orchestrator ──── loads ────► User Context Summary
+    │
+    ├── dispatches concurrently ──► Asset Class Agents (relevant subset)
+    │                                   │
+    │                                   ├── Stocks Agent
+    │                                   ├── Bonds Agent
+    │                                   ├── ETF Agent
+    │                                   ├── Commodities Agent
+    │                                   ├── Real Estate Agent
+    │                                   ├── Economic Data Agent
+    │                                   ├── News & Sentiment Agent
+    │                                   └── Trends & Momentum Agent
+    │                                           │
+    │                                   all invoke ──► Retrieval Agent
+    │
+    ├── activates ──► Philosophy Agents (user's two assigned philosophies)
+    │                       │
+    │                   reason over asset class outputs
+    │
+    ├── delegates ──► Eval Agent (self-validation loop)
+    │                       │
+    │               ┌───────┴────────┐
+    │           sufficient       insufficient
+    │               │                │
+    │           assemble         Clarification Agent
+    │           response              │
+    │               │            formulate question
+    │               ▼                ▼
+    └──────────► Final Response to User
+```
+
+---
+
+## Pending
+
+- Hotness score algorithm definition (Section 8 TBD)
+- V2 Real Estate decomposition into Commercial and Residential sub-agents
+- Evaluation framework design (component-level and system-level evals)
+
