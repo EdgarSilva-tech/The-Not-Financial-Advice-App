@@ -50,12 +50,12 @@ Version 1 is scoped to US markets, US-listed companies, US economic indicators, 
 
 - The system shall allow users to register using email and password
 - The system shall authenticate users via JWT-based authentication
-- The system shall maintain a user profile containing basic personal information
+- The system shall maintain a user profile containing basic personal information, stored in PostgreSQL
 - The system shall allow users to define investment interests and preferred sectors as part of their profile
 - The system shall allow users to define a risk appetite level: conservative, moderate, or aggressive
 - The system shall use risk appetite to filter and frame outputs across all system features including reports, digests, trend surfacing, and chat responses
 - The system shall store and maintain per-user history including conversations, generated reports, and followed entities
-- The system shall maintain a distilled user context summary per user, updated by the summarisation service on relevant user events such as new conversations, preference changes, and new followed entities
+- The system shall maintain a temporal user context graph per user via Graphiti, updated on relevant user events such as new conversations, preference changes, and new followed entities
 
 ---
 
@@ -117,6 +117,16 @@ Version 1 is scoped to US markets, US-listed companies, US economic indicators, 
 - Entity summarisation shall be triggered by ingestion events
 - User context summarisation shall be triggered by user interaction events
 - Both summary types shall share the same underlying summarisation infrastructure but operate as separate pipelines
+- Entity summaries and user context summaries shall be stored as nodes and properties in the Neo4j knowledge graph, managed via Graphiti
+
+### 4.5 Agent Memory
+
+- The system shall use Graphiti as the agent memory layer, managing a temporal knowledge graph on top of Neo4j
+- Graphiti shall maintain a time-aware graph of entities, relationships, user behaviour, and interaction history
+- The Orchestrator shall query Graphiti directly to load user context before processing any query
+- Agent memory shall be relational and temporal — capturing not just what is known but when it was established and how it has evolved
+- User interaction history, followed entity relationships, and conversation context shall be stored as graph nodes and edges via Graphiti
+- Graphiti shall replace flat document-based user context summaries as the primary memory mechanism for the Orchestrator
 
 ---
 
@@ -139,8 +149,8 @@ Version 1 is scoped to US markets, US-listed companies, US economic indicators, 
 ## 6. Conversational Chat Interface
 
 - The system shall restrict conversation to investment and finance related topics, declining to respond to unrelated queries
-- The system shall maintain stateful conversation history per user across sessions
-- The system shall load the distilled user context summary before processing any query, including risk appetite, followed entities, preferences, and summarised recent history
+- The system shall maintain stateful conversation history per user across sessions via Graphiti
+- The system shall load the user's temporal context graph via Graphiti before processing any query, including risk appetite, followed entities, preferences, and interaction history
 - The orchestrator shall decompose incoming queries into sub-questions informed by the loaded user context before dispatching to sub-agents
 - The orchestrator shall dispatch sub-questions to relevant specialised sub-agents concurrently
 - Each sub-agent shall use its own tools and data sources to answer its assigned sub-question
@@ -333,8 +343,8 @@ Asset class agents own **what** data gets retrieved. Philosophy agents own **how
 
 - Ingestion event stream (Kafka)
 - User interaction event stream
-- Raw document store
-- Summary store (MongoDB)
+- Raw document store (PostgreSQL)
+- Neo4j knowledge graph via Graphiti
 
 ---
 

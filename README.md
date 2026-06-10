@@ -27,11 +27,11 @@ Every output — digests, reports, chat responses, trend signals — is personal
 ### Multi-Agent Architecture
 An orchestrator agent decomposes user queries and dispatches them concurrently to specialised sub-agents, each with their own tools and data sources. The orchestrator applies iterative self-validation before returning answers, asking clarifying questions rather than returning low-confidence responses.
 
-### Summarisation Service
-A core system-wide capability that maintains structured, up-to-date summaries per tracked entity and per user. Entity summaries are sectioned by data type (news, analyst sentiment, filings, market context) and serve as the primary knowledge input for agent operations. User context summaries are consumed by the orchestrator at the start of every interaction.
+### Summarisation Service and Agent Memory
+A core system-wide capability that maintains structured, up-to-date summaries per tracked entity. Entity summaries are sectioned by data type (news, analyst sentiment, filings, market context) and stored as nodes in the Neo4j knowledge graph via Graphiti. User context and interaction history are maintained as a temporal knowledge graph by Graphiti, consumed by the orchestrator at the start of every interaction.
 
 ### Data Ingestion Pipelines
-Multiple independent pipelines operate at cadences appropriate to each data type — daily for market prices, scheduled for news, aligned to release calendars for economic indicators, and daily for SEC filings via EDGAR.
+Multiple independent pipelines operate at cadences appropriate to each data type — daily for market prices, scheduled for news, aligned to release calendars for economic indicators, and daily for SEC filings via EDGAR. Raw ingested documents are persisted in PostgreSQL.
 
 ### Report Generation
 Professional PDF reports generated on demand, stored in object storage, and delivered via presigned URLs. Reports perform deep retrieval from raw sources rather than relying on summaries, and cite all sources including agent reasoning.
@@ -55,9 +55,11 @@ Professional PDF reports generated on demand, stored in object storage, and deli
 | Area | Technology |
 |---|---|
 | Agents & Orchestration | MCP, A2A, multi-agent framework TBD |
-| Knowledge Retrieval | Graph RAG, Knowledge Graphs |
+| Agent Memory | Graphiti (temporal knowledge graph over Neo4j) |
+| Knowledge Retrieval | Graph RAG, Neo4j Knowledge Graph |
 | Message Queue | RabbitMQ (task dispatch) + Kafka (event streaming) |
-| LLM Memory | Summarisation service + persistent store |
+| Operational Database | PostgreSQL |
+| Graph Database | Neo4j + Graphiti |
 | Observability | OpenTelemetry (OTEL) |
 | Email Delivery | Resend |
 | Object Storage | TBD (cloud agnostic) |

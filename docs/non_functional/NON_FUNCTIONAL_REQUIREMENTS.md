@@ -74,17 +74,17 @@
 
 ## 3. Caching Strategy
 
-Caching serves dual purposes in this system: performance optimisation to reduce redundant external API calls, and a reliability mechanism to serve data during source outages.
+Caching serves dual purposes in this system: performance optimisation to reduce redundant external API calls, and a reliability mechanism to serve data during source outages. Raw ingested documents are persisted in PostgreSQL; Redis serves as the cache layer.
 
 | Data Type | Cache TTL | Rationale |
 |---|---|---|
-| Intraday price data | 24 hours | Discarded after permanent daily OHLCV record is written |
+| Intraday price data | 24 hours | Discarded after permanent daily OHLCV record is written to PostgreSQL |
 | News articles | 4 hours | Aligned to ingestion cadence of every few hours |
 | Entity summaries | 12 hours | Updated by ingestion events; manual refresh available |
 | Economic indicators | 24 hours | Release schedule driven; rarely changes intraday |
 | SEC filings | 24 hours | Aligned to daily ingestion cadence |
 | Hotness scores | Until next scheduled update | Midday (13:00 ET) and EOD (16:30 ET) updates define windows |
-| User context summary | 1 hour | Updated on user events; should remain relatively fresh |
+| User context graph | Loaded fresh per query | Graphiti queries Neo4j directly; Redis caches frequent lookups |
 
 ---
 
@@ -272,7 +272,7 @@ Caching serves dual purposes in this system: performance optimisation to reduce 
 - Readiness indicates whether the service is ready to handle requests including database connectivity and dependency availability
 - Prometheus shall scrape all health endpoints on a defined polling interval
 - The system shall alert the developer after 3 consecutive health check failures on any service
-- Internal cluster health for RabbitMQ, Kafka, and MongoDB shall be monitored via their native mechanisms and exposed to Grafana
+- Internal cluster health for RabbitMQ, Kafka, PostgreSQL, and Neo4j shall be monitored via their native mechanisms and exposed to Grafana
 
 ### 7.8 Storage Monitoring
 
@@ -340,8 +340,8 @@ All alerts shall be delivered to the developer via email and shall include suffi
 
 ### 9.1 User Data Consistency
 
-- User account data, profiles, preferences, and risk appetite shall be treated with strong consistency guarantees
-- Changes to user preferences and risk appetite shall be reflected in all subsequent outputs within the user context summary TTL window of 1 hour
+- User account data, profiles, preferences, and risk appetite shall be stored in PostgreSQL and treated with strong consistency guarantees via ACID transactions
+- Changes to user preferences and risk appetite shall be reflected in all subsequent outputs within the Graphiti context graph refresh window
 
 ### 9.2 Report and Digest Immutability
 
@@ -352,6 +352,7 @@ All alerts shall be delivered to the developer via email and shall include suffi
 ### 9.3 Agent Reasoning Audit Trail
 
 - The system shall store the full reasoning trace for every agent interaction including: query received, sub-agents called, inputs and outputs per agent, eval agent verdicts, and final response
+- Audit traces shall be stored in PostgreSQL
 - Audit traces shall be retained for a minimum of 90 days
 - Audit traces shall be queryable for debugging, evaluation, and incident investigation purposes
 
@@ -364,5 +365,6 @@ All alerts shall be delivered to the developer via email and shall include suffi
 
 ### 9.5 Knowledge Graph Consistency
 
-- Entity updates shall be propagated to the knowledge graph atomically — partial updates shall not be committed
+- Entity updates shall be propagated to the Neo4j knowledge graph atomically via Graphiti — partial updates shall not be committed
 - Knowledge graph consistency shall be verified as part of the ingestion pipeline completion check
+- Graphiti shall maintain temporal consistency — all graph mutations shall be timestamped and traceable
