@@ -1,7 +1,7 @@
 # PostgreSQL Database Schema — ERD
 ## Financial Intelligence Multi-Agent System
 
-**Version:** 0.1.0  
+**Version:** 0.2.0  
 **Status:** Draft  
 **Last Updated:** 2026-05-01
 
@@ -27,7 +27,7 @@ erDiagram
     uuid sector_id PK
     string sector_name
     string sector_description
-    uuid associated_pipeline FK
+    uuid pipeline_def_id FK
   }
   Entities {
     uuid entity_id PK
@@ -118,9 +118,17 @@ erDiagram
     timestamp expires_at
     string status
   }
+  PipelineDefinitions {
+    uuid pipeline_def_id PK
+    string pipeline_name
+    string pipeline_type
+    uuid sector_id FK
+    string cadence
+    timestamp created_at
+  }
   Pipelines {
     string pipeline_id PK
-    string pipeline_run_name
+    uuid pipeline_def_id FK
     string run_status
     string run_error_log
     uuid data_source_id FK
@@ -220,6 +228,7 @@ erDiagram
   Entities ||--o{ AnalystCommentary : analysed_by
   Sectors ||--o{ UserPreferredSectors : preferred_by
   Sectors ||--o{ DataSources : sourced_by
+  Sectors }o--|| PipelineDefinitions : processed_by
   Documents ||--o{ DocumentTags : tagged_with
   ChatSessions ||--o{ ChatMessages : contains
   ChatSessions ||--o{ AgentAuditTrail : traced_by
@@ -228,6 +237,7 @@ erDiagram
   DataSources ||--o{ NewsArticles : provides
   DataSources ||--o{ EconomicIndicatorReleases : provides
   DataSources ||--o{ AnalystCommentary : provides
+  PipelineDefinitions ||--o{ Pipelines : runs
   Pipelines ||--o{ PipelineCheckpoints : checkpoints
   Pipelines }o--|| DataSources : ingests
 ```
@@ -251,7 +261,8 @@ erDiagram
 | DataSources | External data providers (NewsAPI, FRED, EDGAR etc.) |
 | DataSourceLinks | API endpoints and documentation URLs per data source |
 | DataSourceOutputs | Individual output files produced per pipeline run per data source |
-| Pipelines | Pipeline run records with Snowflake IDs |
+| PipelineDefinitions | Pipeline definitions — what a pipeline is and its cadence |
+| Pipelines | Individual pipeline run records with Snowflake IDs |
 | PipelineCheckpoints | Micro-batch checkpoints for crash recovery |
 | AgentAuditTrail | Full reasoning traces per agent interaction |
 | NewsArticles | Ingested news articles within 90-day retention window |
@@ -272,3 +283,14 @@ erDiagram
 | EconomicIndicatorReleases | series_id + release_date | One release per indicator per date |
 | UserFollowedEntities | user_id + entity_id | Prevent duplicate follows |
 | UserPreferredSectors | user_id + sector_id | Prevent duplicate sector preferences |
+
+---
+
+## Pipeline Design Note
+
+`PipelineDefinitions` separates **what a pipeline is** from **a specific execution of it**:
+
+- `PipelineDefinitions` — defines the pipeline: its name, type, cadence, and which sector it serves. One record per pipeline type per sector. Static, rarely changes.
+- `Pipelines` — records each individual run of a pipeline definition. One record per execution with its own Snowflake ID, status, start/end times, and error log.
+
+This means a sector has a FK to `PipelineDefinitions` (its dedicated pipeline) while `Pipelines` accumulates run history over time without polluting the sector record.
