@@ -148,9 +148,9 @@ erDiagram
     uuid user_id FK
     uuid session_id FK
     string query_text
-    json messages_traces
-    json tool_calls
-    json evaluation_content
+    jsonb messages_traces
+    jsonb tool_calls
+    jsonb evaluation_content
     int total_tokens_used
     int total_latency_ms
     timestamp created_at
@@ -231,6 +231,7 @@ erDiagram
   Sectors }o--|| PipelineDefinitions : processed_by
   Documents ||--o{ DocumentTags : tagged_with
   ChatSessions ||--o{ ChatMessages : contains
+  Users ||--o{ ChatMessages : sends
   ChatSessions ||--o{ AgentAuditTrail : traced_by
   DataSources ||--o{ DataSourceLinks : has_links
   DataSources ||--o{ DataSourceOutputs : produces
@@ -239,6 +240,7 @@ erDiagram
   DataSources ||--o{ AnalystCommentary : provides
   PipelineDefinitions ||--o{ Pipelines : runs
   Pipelines ||--o{ PipelineCheckpoints : checkpoints
+  Pipelines ||--o{ DataSourceOutputs : produces_outputs
   Pipelines }o--|| DataSources : ingests
 ```
 

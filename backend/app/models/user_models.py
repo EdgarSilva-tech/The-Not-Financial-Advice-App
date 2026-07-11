@@ -1,13 +1,6 @@
 import uuid
-from sqlalchemy import Column, ForeignKey, String, DateTime, Boolean, ForeignKey
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import Column, ForeignKey, String, DateTime, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.ext.asyncio import AsyncSession
-from contextlib import asynccontextmanager
-import asyncio
-from dotenv import load_dotenv
-import os
 from app.models.base import Base
 
 
@@ -57,9 +50,14 @@ class UserFollowedEntities(Base):
     __tablename__ = "UserFollowedEntities"
 
     id = Column("id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
-    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"))
-    entity_id = Column("entity_id", UUID(as_uuid=True), ForeignKey("Entities.entity_id"))
+    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
+    entity_id = Column("entity_id", UUID(as_uuid=True), ForeignKey("Entities.entity_id"), nullable=False)
     followed_at = Column("followed_at", DateTime)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "entity_id", name="uq_user_followed_entities"),
+    )
+
 
     def __init__(self, id, user_id, entity_id, followed_at):
         self.id = id
@@ -76,9 +74,14 @@ class UserPreferredSectors(Base):
     __tablename__ = "UserPreferredSectors"
 
     id = Column("id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
-    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"))
-    sector_id = Column("sector_id", UUID(as_uuid=True), ForeignKey("Sectors.sector_id"))
-    created_at = Column("created_at", DateTime)
+    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
+    sector_id = Column("sector_id", UUID(as_uuid=True), ForeignKey("Sectors.sector_id"), nullable=False)
+    created_at = Column("created_at", DateTime, default=None)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "sector_id", name="uq_user_followed_sector"),
+    )
+
 
     def __init__(self, id, user_id, sector_id, created_at):
         self.id = id

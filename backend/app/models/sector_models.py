@@ -1,6 +1,5 @@
 import uuid
 from sqlalchemy import Column, String, ForeignKey
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 
@@ -18,7 +17,7 @@ class Sector(Base):
         "sector_description", String
     )
     associated_pipeline = Column(
-        "associated_pipeline", UUID(as_uuid=True), ForeignKey("DataSources.datasource_id")
+        "associated_pipeline", UUID(as_uuid=True), ForeignKey("DataSources.datasource_id"), nullable=False
     )
 
     def __init__(self, sector_id, sector_name, sector_description, associated_pipeline):
@@ -48,7 +47,7 @@ class Entity(Base):
         "exchange", String
     )
     entity_sector = Column(
-        "entity_sector", UUID(as_uuid=True), ForeignKey("Sectors.sector_id")
+        "entity_sector", UUID(as_uuid=True), ForeignKey("Sectors.sector_id"), nullable=False
     )
     entity_description = Column(
         "entity_description", String
