@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, Boolean
+from sqlalchemy import Column, ForeignKey, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -8,13 +8,7 @@ from contextlib import asynccontextmanager
 import asyncio
 from dotenv import load_dotenv
 import os
-
-load_dotenv()
-POSTGRES_USER=os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD=os.getenv("POSTGRES_PASSWORD")
-POSTGRES_PORT=os.getenv("POSTGRES_PORT")
-POSTGRES_DB_NAME=os.getenv("POSTGRES_DB_NAME")
-Base = declarative_base()
+from app.models.base import Base
 
 
 class User(Base):
@@ -25,7 +19,7 @@ class User(Base):
         "user_id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True
     )
     username = Column("username", String)
-    email = Column("email", String)
+    email = Column("email", String, unique=True)
     email_confirmed = Column("email_confirmed", Boolean, default=False)
     confirmed_at = Column("confirmed_at", DateTime, default=None)
     created_at = Column("created_at", DateTime, default=None)
@@ -58,40 +52,39 @@ class User(Base):
     def __repr__(self):
         return f"{self.user_id} - {self.username} - {self.risk_tolerance}"
 
+class UserFollowedEntities(Base):
 
-engine = create_async_engine(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@localhost:{POSTGRES_PORT}/{POSTGRES_DB_NAME}", echo=True)
+    __tablename__ = "UserFollowedEntities"
 
+    id = Column("id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
+    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"))
+    entity_id = Column("entity_id", UUID(as_uuid=True), ForeignKey("Entities.entity_id"))
+    followed_at = Column("followed_at", DateTime)
 
-async def init_session():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    def __init__(self, id, user_id, entity_id, followed_at):
+        self.id = id
+        self.user_id = user_id
+        self.entity_id = entity_id
+        self.followed_at = followed_at
 
-Session = sessionmaker(bind=engine, class_=AsyncSession)
-
-
-@asynccontextmanager
-async def get_session():
-    try:
-        async_session = Session()
-
-        async with async_session as session:
-            yield session
-    except:
-        await session.rollback()
-        raise
-    finally:
-        await session.close()
-
-user_id = uuid.uuid4()
-test = User(user_id=user_id, username="Test_User", email="test@email.pt", email_confirmed=False, confirmed_at=None, created_at=None, updated_at=None, risk_tolerance="Low", investment_philosophy_1="Value", investment_philosophy_2="Macro", digest_delivery_day="Tuesday", password_hash="bdygbbcdygdbgycdyg")
+    def __repr__(self) -> str:
+        return f"{self.id} - {self.user_id} - {self.entity_id} - {self.followed_at}"
 
 
-async def Test():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+class UserPreferredSectors(Base):
 
-    async with get_session() as session:
-        session.add(test)
-        await session.commit()
+    __tablename__ = "UserPreferredSectors"
 
-asyncio.run(Test())
+    id = Column("id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
+    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"))
+    sector_id = Column("sector_id", UUID(as_uuid=True), ForeignKey("Sectors.sector_id"))
+    created_at = Column("created_at", DateTime)
+
+    def __init__(self, id, user_id, sector_id, created_at):
+        self.id = id
+        self.user_id = user_id
+        self.sector_id = sector_id
+        self.created_at = created_at
+
+    def __repr__(self) -> str:
+        return f"{self.id} - {self.user_id} - {self.sector_id} - {self.followed_at}"

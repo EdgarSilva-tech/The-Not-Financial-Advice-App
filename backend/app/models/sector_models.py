@@ -2,15 +2,8 @@ import uuid
 from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
-from dotenv import load_dotenv
-import os
+from app.models.base import Base
 
-load_dotenv()
-POSTGRES_USER=os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD=os.getenv("POSTGRES_PASSWORD")
-POSTGRES_PORT=os.getenv("POSTGRES_PORT")
-POSTGRES_DB_NAME=os.getenv("POSTGRES_DB_NAME")
-Base = declarative_base()
 
 class Sector(Base):
     __tablename__ = "Sectors"
@@ -25,7 +18,7 @@ class Sector(Base):
         "sector_description", String
     )
     associated_pipeline = Column(
-        "associated_pipeline", UUID(as_uuid=True), ForeignKey()
+        "associated_pipeline", UUID(as_uuid=True), ForeignKey("DataSources.datasource_id")
     )
 
     def __init__(self, sector_id, sector_name, sector_description, associated_pipeline):
