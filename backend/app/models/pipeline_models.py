@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
+from sqlalchemy.sql import func
 
 
 class Pipeline(Base):
@@ -33,14 +34,14 @@ class Pipeline(Base):
 
 
 class PipelineDefinition(Base):
-    __tablenames__="PipelineDefinitions"
+    __tablename__="PipelineDefinitions"
 
     pipeline_def_id = Column("pipeline_def_id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     pipeline_name = Column("pipeline_name", String, nullable=False)
     pipeline_type = Column("pipeline_type", String)
     sector_id = Column("sector_id", UUID(as_uuid=True), ForeignKey("Sectors.sector_id"), nullable=False)
     cadence = Column("cadence", String)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __init__(
         self, pipeline_def_id, pipeline_name, pipeline_type,
@@ -58,13 +59,13 @@ class PipelineDefinition(Base):
 
 
 class PipelineCheckpoint(Base):
-    __tablenames__="PipelineCheckpoint"
+    __tablename__="PipelineCheckpoint"
 
     checkpoint_id = Column("checkpoint_id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     pipeline_id = Column("pipeline_id", UUID(as_uuid=True), ForeignKey("Pipelines.pipeline_id"), nullable=False)
     batch_sequence = Column("batch_sequence", Integer)
     checkpoint_status = Column("checkpoint_status", Integer)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     batch_error_log = Column("batch_error_log", String)
 
     def __init__(

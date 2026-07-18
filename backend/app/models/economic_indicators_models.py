@@ -15,7 +15,7 @@ class NewsArticle(Base):
     title = Column("title", String)
     author = Column("author", String)
     published_at = Column("published_at", DateTime, default=None)
-    fetched_at = Column("fetched_at", DateTime, default=None)
+    fetched_at = Column("fetched_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     sentiment_score = Column("sentiment_score", Float)
     status = Column("status", String)
 
@@ -51,7 +51,7 @@ class AnalystCommentary(Base):
     rating = Column("rating", String)
     price_target = Column("price_target", Numeric(precision=12, scale=2))
     published_at = Column("published_at", DateTime, default=None)
-    fetched_at = Column("fetched_at", DateTime, default=None)
+    fetched_at = Column("fetched_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     expires_at = Column("expires_at", DateTime, default=None)
     status = Column("status", String)
 
@@ -83,10 +83,10 @@ class EconomicIndicatorRelease(Base):
     datasource_id = Column("datasource_id", UUID(as_uuid=True), ForeignKey("DataSources.datasource_id"), nullable=False)
     series_id = Column("series_id", String)
     indicador_name = Column("indicador_name", String)
-    release_date = Column("release_date", DateTime)
+    release_date = Column("release_date", Date, nullable=False)
     value = Column("value", Numeric(precision=12, scale=2))
     unit = Column("unit", String)
-    fetched_at = Column("fetched_at", DateTime, default=None)
+    fetched_at = Column("fetched_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __init__(self, release_id, datasource_id, series_id, indicador_name,
                 release_date, value, unit, fetched_at
@@ -114,7 +114,7 @@ class SECFiling(Base):
     accession_number = Column("accession_number", String)
     filling_type = Column("filling_type", String)
     filed_at = Column("filed_at", DateTime)
-    fetched_at = Column("fetched_at", DateTime, default=None)
+    fetched_at = Column("fetched_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     content = Column("content", String)
     filing_url = Column("filing_url", String)
     status = Column("status", String)
@@ -142,13 +142,13 @@ class OHLCVPrice(Base):
 
     price_id = Column("price_id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     entity_id = Column("entity_id", UUID(as_uuid=True), ForeignKey("Entities.entity_id"), nullable=False)
-    trading_date = Column("trading_date", Date(timezone=True), server_default=func.now(), nullable=False)
+    trading_date = Column("trading_date", Date, nullable=False)
     open = Column("open", Numeric(precision=12, scale=2))
     high = Column("high", Numeric(precision=12, scale=2))
     low = Column("low", Numeric(precision=12, scale=2))
     close = Column("close", Numeric(precision=12, scale=2))
     volume = Column("volume", BIGINT)
-    fetched_at = Column("fetched_at", DateTime, default=None)
+    fetched_at = Column("fetched_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __init__(self, price_id, entity_id, trading_date, open,
                 high, low, close, volume, fetched_at

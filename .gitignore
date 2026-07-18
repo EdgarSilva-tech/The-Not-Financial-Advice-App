@@ -115,3 +115,4 @@ test-results/
 *.sql.gz
 *.dump
 pgdata/
+backend/alembic/versions/

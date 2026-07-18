@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import Column, ForeignKey, String, DateTime, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
+from sqlalchemy.sql import func
 
 
 class User(Base):
@@ -15,7 +16,7 @@ class User(Base):
     email = Column("email", String, unique=True)
     email_confirmed = Column("email_confirmed", Boolean, default=False)
     confirmed_at = Column("confirmed_at", DateTime, default=None)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column("updated_at", DateTime, default=None)
     risk_tolerance = Column("risk_tolerance", String)
     investment_philosophy_1 = Column("investment_philosophy_1", String)
@@ -52,7 +53,7 @@ class UserFollowedEntities(Base):
     id = Column("id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
     entity_id = Column("entity_id", UUID(as_uuid=True), ForeignKey("Entities.entity_id"), nullable=False)
-    followed_at = Column("followed_at", DateTime)
+    followed_at = Column("followed_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (
         UniqueConstraint("user_id", "entity_id", name="uq_user_followed_entities"),
@@ -76,7 +77,7 @@ class UserPreferredSectors(Base):
     id = Column("id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
     sector_id = Column("sector_id", UUID(as_uuid=True), ForeignKey("Sectors.sector_id"), nullable=False)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (
         UniqueConstraint("user_id", "sector_id", name="uq_user_followed_sector"),

@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
+from sqlalchemy.sql import func
 
 
 class Notification(Base):
@@ -12,7 +13,7 @@ class Notification(Base):
     user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
     notification_text = Column("notification_text", String)
     notification_type = Column("notification_type", String)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     read_at = Column("read_at", DateTime, default=None)
     error_log = Column("error_log", String)
 
@@ -38,8 +39,8 @@ class ChatSession(Base):
     __tablename__="ChatSessions"
 
     session_id = Column("session_id", UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
-    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), False)
-    created_at = Column("created_at", DateTime, default=None)
+    user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_active_at = Column("last_active_at", DateTime, default=None)
     session_status = Column("session_status", String)
     message_count = Column("message_count", Integer)
@@ -68,7 +69,7 @@ class ChatMessage(Base):
     user_id = Column("user_id", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
     role = Column("role", String)
     content = Column("content", String)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
     tokens_used = Column("tokens_used", Integer)
 
     def __init__(
@@ -100,7 +101,7 @@ class AgentAuditTrail(Base):
     evaluation_content = Column("evaluation_content", JSONB)
     total_tokens_used = Column("total_tokens_used", Integer)
     total_latency_ms = Column("total_latency_ms", Integer)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __init__(
         self, audit_id, user_id, session_id, query_text,

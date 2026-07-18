@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import Column, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
+from sqlalchemy.sql import func
 
 
 class Document(Base):
@@ -16,7 +17,7 @@ class Document(Base):
     request_user = Column("request_user", UUID(as_uuid=True), ForeignKey("Users.user_id"), nullable=False)
     delivery_status = Column("delivery_status", String)
     error_log = Column("error_log", String)
-    created_at = Column("created_at", DateTime, default=None)
+    created_at = Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __init__(
         self, document_id, title, document_type, date_sent, object_storage_key,
