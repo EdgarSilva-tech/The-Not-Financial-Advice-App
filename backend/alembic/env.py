@@ -9,6 +9,7 @@ from alembic import context
 from app.models.base import Base
 from dotenv import load_dotenv
 import os
+from app.core.config import settings
 import app.models.user_models
 import app.models.sector_models
 import app.models.data_models
@@ -23,7 +24,7 @@ load_dotenv()
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("DB_URL", os.environ["DB_URL"])
+config.set_main_option("DB_URL", settings.DB_URL)
 
 
 # Interpret the config file for Python logging.
